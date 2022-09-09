@@ -27,7 +27,8 @@
       in {
         devShell = mkShell {
           packages = (with pkgs.nix; [
-            poetry
+            python310
+            python310Packages.poetry
             (poetry2nix.mkPoetryEnv { projectDir = ./.; })
           ]);
 
