@@ -21,7 +21,7 @@
         };
 
         lib = pkgs.lib;
-        stdenv = pkgs.nix.stdenvNoCC;
+        stdenv = pkgs.nix.stdenv;
         mkShell = pkgs.nix.mkShell.override { inherit stdenv; };
 
       in {
@@ -34,6 +34,7 @@
 
           shellHook = ''
             export PATH=$PWD/util:$PATH
+            export LD_LIBRARY_PATH=${stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
           '';
         };
       }
