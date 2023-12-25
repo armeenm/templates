@@ -2,41 +2,38 @@
   description = "";
 
   inputs = {
-    nixpkgs.url = github:nixos/nixpkgs;
-    utils.url = github:numtide/flake-utils;
-    poetry2nix.url = github:nix-community/poetry2nix;
+    nixpkgs.url = "github:nixos/nixpkgs";
   };
 
-  outputs = inputs@{ self, nixpkgs, ... }:
-    inputs.utils.lib.eachDefaultSystem (system:
-      let
-        overlay = nixpkgs.lib.composeManyExtensions [
-          inputs.poetry2nix.overlay
+  outputs = inputs@{ self, nixpkgs, ... }: let
+    config = {
+      allowUnfree = true;
+    };
+
+    forAllSystems = f: nixpkgs.lib.genAttrs [
+      "x86_64-linux"
+      "aarch64-linux"
+    ] (system: f system (
+      import nixpkgs { inherit system config; }
+    ));
+
+  in {
+    devShells = forAllSystems (system: pkgs: with pkgs; {
+      default = mkShell rec {
+        packages = [
+          python3
+          pdm
         ];
 
-        pkgs.nix = import nixpkgs {
-          inherit system;
-          config.allowUnfree = true;
-          overlays = [ overlay ];
-        };
+        libs = nixpkgs.lib.makeLibraryPath [
+          stdenv.cc.cc.lib
+        ];
 
-        lib = pkgs.lib;
-        stdenv = pkgs.nix.stdenv;
-        mkShell = pkgs.nix.mkShell.override { inherit stdenv; };
-
-      in {
-        devShell = mkShell {
-          packages = (with pkgs.nix; [
-            python3
-            python3Packages.poetry
-            (poetry2nix.mkPoetryEnv { projectDir = ./.; })
-          ]);
-
-          shellHook = ''
-            export PATH=$PWD/util:$PATH
-            export LD_LIBRARY_PATH=${stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
-          '';
-        };
-      }
-    );
+        shellHook = ''
+        export PATH=$PWD/util:$PATH
+        export LD_LIBRARY_PATH=${libs}:$LD_LIBRARY_PATH
+        '';
+      };
+    });
+  };
 }
